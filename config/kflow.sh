@@ -19,12 +19,12 @@ export GCP_BUCKET=gs://kf-test1234
 
 # Use the following kfctl configuration file for authentication with 
 # Cloud IAP (recommended):
-export CONFIG_URI="https://raw.githubusercontent.com/kubeflow/manifests/v0.7-branch/kfdef/kfctl_gcp_iap.0.7.1.yaml"
+export CONFIG_URI="https://raw.githubusercontent.com/kubeflow/manifests/v1.0-branch/kfdef/kfctl_gcp_iap.v1.0.1.yaml"
 
 # For using Cloud IAP for authentication, create environment variables
 # from the OAuth client ID and secret that you obtained earlier:
-# CLIENT_ID=<ADD OAuth CLIENT ID HERE>
-# CLIENT_SECRET=<ADD OAuth CLIENT SECRET HERE>
+export CLIENT_ID=<ADD OAuth CLIENT ID HERE>
+export CLIENT_SECRET=<ADD OAuth CLIENT SECRET HERE>
 
 # Set KF_NAME to the name of your Kubeflow deployment. You also use this
 # value as directory name when creating your configuration directory. 
@@ -35,5 +35,6 @@ export KF_NAME=kf-test
 # # while creating the Kubeflow cluster
 # SA_NAME=
 
-export BASE_DIR=kubeflow
+export BASE_DIR=~/kubeflow
 export KF_DIR=${BASE_DIR}/${KF_NAME}
+mkdir -p $KF_DIR
