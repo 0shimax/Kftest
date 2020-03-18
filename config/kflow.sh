@@ -9,7 +9,7 @@
 # gcloud auth application-default login
 
 # Set GCP project ID and the zone where you want to create the Kubeflow deployment
-export PROJECT=activent-tracker
+export PROJECT=xxx
 export ZONE=asia-east1-a
 gcloud config set project ${PROJECT}
 gcloud config set compute/zone ${ZONE}
