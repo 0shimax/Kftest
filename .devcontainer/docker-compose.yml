@@ -5,8 +5,8 @@ services:
     command: sleep infinity
     image: sh7/pytorch:v0.1
     volumes:
-       - C:\Users\sh70k\project:/project
-       - C:\Users\sh70k\data:/data
+       - C:\Users\xxxx\project:/project
+       - C:\Users\xxxx\data:/data
     ports:
       - 8888:8888
       - 5000:5000
