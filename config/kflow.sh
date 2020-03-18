@@ -1,8 +1,9 @@
 # # initial setup
 # mkdir kubeflow
 # cd kubeflow
-# curl -LO https://github.com/kubeflow/kubeflow/releases/download/v0.7.0/kfctl_v0.7.0_linux.tar.gz
-# tar -xvf kfctl_v0.7.0_linux.tar.gz
+# curl -LO https://github.com/kubeflow/kfctl/releases/download/v1.0.1/kfctl_v1.0.1-0-gf3edb9b_linux.tar.gz
+# tar -xvf kfctl_v1.0.1-0-gf3edb9b_linux.tar.gz
+# sudo mv ./kfctl /usr/local/bin
 
 # # Create user credentials
 # # If using GCE, this command is not necessary
@@ -17,9 +18,10 @@ gcloud config set compute/zone ${ZONE}
 # google cloud storage bucket
 export GCP_BUCKET=gs://kf-test1234
 
+# Make the same version as kfctl.
 # Use the following kfctl configuration file for authentication with 
 # Cloud IAP (recommended):
-export CONFIG_URI="https://raw.githubusercontent.com/kubeflow/manifests/v1.0-branch/kfdef/kfctl_gcp_iap.v1.0.1.yaml"
+export CONFIG="https://raw.githubusercontent.com/kubeflow/manifests/v1.0-branch/kfdef/kfctl_gcp_iap.v1.0.0.yaml"
 
 # For using Cloud IAP for authentication, create environment variables
 # from the OAuth client ID and secret that you obtained earlier:
