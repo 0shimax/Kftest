@@ -1,0 +1,19 @@
+{
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "jupyterlab",
+    "workspaceFolder": "/project/DDGA",
+	"settings": { 
+		"terminal.integrated.shell.linux": "/bin/bash",
+		// python環境の設定
+		"python.pythonPath": "/usr/bin/python3",
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": true
+	},
+	"extensions": [
+		"ms-python.python",
+		"nick-rudenko.back-n-forth",
+		"mhutchie.git-graph",
+		"eamodio.gitlens",
+		"xshrim.txt-syntax"
+    ]
+}
