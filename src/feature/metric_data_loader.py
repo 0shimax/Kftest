@@ -7,17 +7,19 @@ from torchvision import datasets, transforms
 from torch.utils.data import Dataset
 from PIL import Image
 
-from feature.utils import ImageTransform
+from feature.utils import ImageTransform, GcsIO
 
 
 class WBCDataset(Dataset):
     def __init__(self, n_class, image_labels, root_dir,
                  subset="Dataset1", transform=ImageTransform(),
+                 project="<your project id>", bucket_name="kf-test1234",
                  train=True):
         super().__init__()
         self.image_labels = image_labels
         self.root_dir = root_dir
         self.subset = subset
+        self.gcs_io = GcsIO(project, bucket_name)
         self.transform = transform
 
         self.n_class = n_class
@@ -30,8 +32,10 @@ class WBCDataset(Dataset):
     def __getitem__(self, idx):
         img_name, label = self.image_labels[idx]
         image_path = Path(self.root_dir, self.subset, "{0:03}.bmp".format(img_name))
-        image = io.imread(image_path)
-        image = self._transform(image)
+        # image = io.imread(image_path)
+        # image = self._transform(image)
+        image = self.gcs_io.load_image(gcs_path)
+        image = self.transform(image)
 
         if self.train:
             near_image = self._get_near_image(label)

@@ -5,8 +5,8 @@ import numpy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 import pandas
+from google.cloud import storage
 from model.trans_NFCM import TransNFCM
 from optimizer.radam import RAdam
 from feature.metric_data_loader import WBCDataset, loader
@@ -39,7 +39,9 @@ def main(args):
     optimizer = RAdam(model.parameters(), weight_decay=1e-3)
 
     image_label = pandas.read_csv(
-        Path(args.data_root, 
+        Path("gs://",
+             args.bucket-name,
+             args.data_root, 
              args.metadata_file_name.format(args.subset))
     )
     image_label = image_label.sample(frac=1, random_state=551)
@@ -47,20 +49,10 @@ def main(args):
     image_label = image_label.values
 
     train_dataset = WBCDataset(args.n_class, image_label[:250], args.data_root, 
+                               project=args.project, bucket_name=args.bucket_name,
                                subset=args.subset, train=True)
-    val_dataset = WBCDataset(args.n_class, image_label[:250], args.data_root, 
-                              subset=args.subset, train=False)
-    test_dataset = WBCDataset(args.n_class, image_label[250:], args.data_root, 
-                              subset=args.subset, train=False)
     train_loader = loader(train_dataset, args.batch_size)
-    val_loader = loader(val_dataset, 1, shuffle=False)
-    test_loader = loader(test_dataset, 1, shuffle=False)
-
-    # train(args, model, optimizer, train_loader)
-    center_vec = val(args, model, val_loader, emb_dim=emb_dim)
-    test(args, model, test_loader, center_vec,
-         show_image_on_board=args.show_image_on_board,
-         show_all_embedding=args.show_all_embedding)
+    train(args, model, optimizer, train_loader)
 
 
 def train(args, model, optimizer, data_loader):
@@ -83,8 +75,6 @@ def train(args, model, optimizer, data_loader):
                          cat, near_cat, cat, far_cat,
                          near_relation, far_relation).sum()
             loss.backward()
-
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), .1)
             optimizer.step()
 
             print('[{}/{}][{}/{}] Loss: {:.4f}'.format(
@@ -99,50 +89,20 @@ def train(args, model, optimizer, data_loader):
                '{}/NFCM_model.pth'.format(args.out_dir))
 
 
-def test(args, model, data_loader, center_vec,
-         show_image_on_board=True, show_all_embedding=False):
-    model.eval()
-    writer = SummaryWriter()
-    weights = []
-    images = []
-    labels = []
-    label_idxs = []
-    result_labels = []
-    with torch.no_grad():
-        for i, (image, cat) in enumerate(data_loader):
-            image = image.to(device)
-            cat = cat.to(device)
-            label_idxs.append(cat.item())
-            labels.append(idx2label[cat.item()])
-            images.append(image.squeeze(0).numpy())
-
-            image_embedded_vec = model.predict(x=image, category=None)
-            vec = F.softmax(image_embedded_vec, dim=1).squeeze(0).numpy()
-            weights.append(vec)
-            result_labels.append(cossim(vec, center_vec))
-
-    weights = torch.FloatTensor(weights)
-    images = torch.FloatTensor(images)
-    if show_image_on_board:
-        writer.add_embedding(weights, label_img=images)
-    else:
-        writer.add_embedding(weights, metadata=labels)
-    print_result(label_idxs, result_labels)
-    print("done")
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-root', default="./data/segmentation_WBC-master")
+    parser.add_argument('--data-root', default="data/segmentation_WBC-master")
     parser.add_argument('--metadata-file-name', default="Class_Labels_of_{}.csv")
     parser.add_argument('--subset', default="Dataset1")
+    parser.add_argument('--project', default="<your project id>")
+    parser.add_argument('--bucket-name', default="kf-test1234")
     parser.add_argument('--n-class', type=int, default=5, help='number of class')
-    parser.add_argument('--resume-model', default='./result/wbc/NFCM_model.pth', help='path to trained model')
+    parser.add_argument('--resume-model', default='export/wbc/NFCM_model.pth', help='path to trained model')
     parser.add_argument('--batch-size', type=int, default=32, help='input batch size')
     parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train for')
     parser.add_argument('--show-image-on-board', action='store_false')
     parser.add_argument('--show-all-embedding', action='store_true')
-    parser.add_argument('--out-dir', default='./result/wbc', help='folder to output data and model checkpoints')
+    parser.add_argument('--out-dir', default='export/wbc', help='folder to output data and model checkpoints')
     args = parser.parse_args()
     Path(args.out_dir).mkdir(parents=True, exist_ok=True),
 
