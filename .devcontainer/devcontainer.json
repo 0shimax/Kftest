@@ -1,7 +1,7 @@
 {
     "dockerComposeFile": "docker-compose.yml",
     "service": "jupyterlab",
-    "workspaceFolder": "/project/DDGA",
+    "workspaceFolder": "/project/ddga",
 	"settings": { 
 		"terminal.integrated.shell.linux": "/bin/bash",
 		// python環境の設定
