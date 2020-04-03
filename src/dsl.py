@@ -10,8 +10,8 @@ platform = 'GCP'
   name='WBC',
   description='A pipeline to train and test the WBC'
 )
-def wbc_pipline(model_export_dir='gs://kf-test1234/export',
-                data_root='gs://kf-test1234/data/segmentation_WBC-master',
+def wbc_pipline(model_export_dir='export',
+                data_root='data/segmentation_WBC-master',
                 metadata_file_name='Class_Labels_of_{}.csv',
                 subset='Dataset1',
                 n_class=5,
@@ -19,25 +19,22 @@ def wbc_pipline(model_export_dir='gs://kf-test1234/export',
                 epochs='50',
                 batch_size='32',
                 pvc_name=''):
-    train = train(model_export_dir,
-                  data_root,
+    train = train(data_root,
                   metadata_file_name,
                   subset,
                   n_class,
-                  resume_model,
                   epochs,
-                  batch_size).set_gpu_limit(1)
+                  batch_size,
+                  model_export_dir).set_gpu_limit(1)
     train.add_node_selector_constraint('cloud.google.com/gke-nodepool', 'gpu-pool')
-    out = train.outputs['output']
+    # out = train.outputs['output']
     
-    test = test(model_export_dir,
-                data_root,
+    test = test(data_root,
                 metadata_file_name,
                 subset,
                 n_class,
                 resume_model,
-                epochs,
-                batch_size)
+                model_export_dir)
     test.after(train)
 
     steps = [train, test]
@@ -46,14 +43,15 @@ def wbc_pipline(model_export_dir='gs://kf-test1234/export',
             step.apply(gcp.use_gcp_secret('user-gcp-sa'))
 
 
-def train(model_export_dir,
-          data_root,
+def train(data_root,
           metadata_file_name,
           subset,
+          project,
+          bucket_name,
           n_class,
-          resume_model,
           epochs,
-          batch_size):
+          batch_size,
+          model_export_dir):
     return dsl.ContainerOp(
             image='gcr.io/<your project id>/wbc-model:v0.1.0',
             command=['python3', 'train.py'],
@@ -62,7 +60,6 @@ def train(model_export_dir,
                     '--metadata-file-name', metadata_file_name,
                     '--subset', subset,
                     '--n-class', n_class,
-                    '--resume-model', resume_model,
                     '--epochs', epochs,
                     '--batch_size', batch_size,
                     '--out-dir', model_export_dir
@@ -73,14 +70,14 @@ def train(model_export_dir,
         )
 
 
-def test(model_export_dir,
-         data_root,
+def test(data_root,
          metadata_file_name,
          subset,
+         project,
+         bucket_name,
          n_class,
          resume_model,
-         epochs,
-         batch_size):
+         model_export_dir):
     return dsl.ContainerOp(
             image='gcr.io/<your project id>/wbc-model:v0.1.0',
             command=['python3', 'test.py'],
@@ -88,10 +85,10 @@ def test(model_export_dir,
                     '--data-root', data_root,
                     '--metadata-file-name', metadata_file_name,
                     '--subset', subset,
+                    '--project', project,
+                    '--bucket-name', bucket_name,
                     '--n-class', n_class,
                     '--resume-model', resume_model,
-                    '--epochs', epochs,
-                    '--batch_size', batch_size,
                     '--out-dir', model_export_dir
             ],
             file_outputs={

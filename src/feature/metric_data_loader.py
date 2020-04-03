@@ -1,7 +1,6 @@
 from pathlib import Path
 import random
 import numpy
-from skimage import io
 import torch
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset
@@ -31,10 +30,7 @@ class WBCDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name, label = self.image_labels[idx]
-        image_path = Path(self.root_dir, self.subset, "{0:03}.bmp".format(img_name))
-        # image = io.imread(image_path)
-        # image = self._transform(image)
-        image = self.gcs_io.load_image(gcs_path)
+        image = self._read_image(img_name)
         image = self.transform(image)
 
         if self.train:
@@ -58,7 +54,7 @@ class WBCDataset(Dataset):
         idx = idxs[0]
         img_name, label = self.image_labels[idx]
         image = self._read_image(img_name)
-        image = self._transform(image)
+        image = self.transform(image)
         return image, label
 
     def _get_near_image(self, near_category):
@@ -68,16 +64,11 @@ class WBCDataset(Dataset):
 
         img_name = self.image_labels[idx][0]
         image = self._read_image(img_name)
-        return self._transform(image)
-
-    def _transform(self, image):
-        image = Image.fromarray(numpy.uint8(image))
-        image = self.transform(image)
-        return image
+        return self.transform(image)
 
     def _read_image(self, img_name):
-        image_path = Path(self.root_dir, self.subset, "{0:03}.bmp".format(img_name))
-        image = io.imread(image_path)
+        image_path = '/'.join([self.root_dir, self.subset, "{0:03}.bmp".format(img_name)])
+        image = self.gcs_io.load_image(image_path)
         return image
 
 
@@ -86,5 +77,5 @@ def loader(dataset, batch_size,  shuffle=True):
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=4)
+        num_workers=1)
     return loader

@@ -10,7 +10,7 @@ from google.cloud import storage
 from model.trans_NFCM import TransNFCM
 from optimizer.radam import RAdam
 from feature.metric_data_loader import WBCDataset, loader
-from metric.utils import print_result, cossim, val
+from feature.utils import GcsIO
 
 
 torch.manual_seed(555)
@@ -32,15 +32,11 @@ def main(args):
                       n_relational_embeddings, n_tag_embeddings,
                       embedding_dim=emb_dim).to(device)
 
-    if Path(args.resume_model).exists():
-        print("load model:", args.resume_model)
-        model.load_state_dict(torch.load(args.resume_model))
-
     optimizer = RAdam(model.parameters(), weight_decay=1e-3)
 
     image_label = pandas.read_csv(
         Path("gs://",
-             args.bucket-name,
+             args.bucket_name,
              args.data_root, 
              args.metadata_file_name.format(args.subset))
     )
@@ -55,7 +51,7 @@ def main(args):
     train(args, model, optimizer, train_loader)
 
 
-def train(args, model, optimizer, data_loader):
+def train(args, model, optimizer, data_loader, model_name="NFCM_model.pth"):
     model.train()
     for epoch in range(args.epochs):
         for i, (image, cat, near_image, near_cat, far_image, far_cat, near_relation, far_relation) in enumerate(data_loader):
@@ -81,12 +77,9 @@ def train(args, model, optimizer, data_loader):
                   epoch, args.epochs, i,
                   len(data_loader), loss.item()))
 
-        # do checkpointing
-        if epoch % 50 == 0:
-            torch.save(model.state_dict(),
-                       '{}/NFCM_model.pth'.format(args.out_dir))
-    torch.save(model.state_dict(),
-               '{}/NFCM_model.pth'.format(args.out_dir))
+    model_path = args.out_dir+"/"+model_name
+    torch.save(model.state_dict(), model_path)
+    data_loader.dataset.gcs_io.upload_file(model_path, model_path)
 
 
 if __name__ == '__main__':
@@ -97,11 +90,8 @@ if __name__ == '__main__':
     parser.add_argument('--project', default="<your project id>")
     parser.add_argument('--bucket-name', default="kf-test1234")
     parser.add_argument('--n-class', type=int, default=5, help='number of class')
-    parser.add_argument('--resume-model', default='export/wbc/NFCM_model.pth', help='path to trained model')
     parser.add_argument('--batch-size', type=int, default=32, help='input batch size')
     parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train for')
-    parser.add_argument('--show-image-on-board', action='store_false')
-    parser.add_argument('--show-all-embedding', action='store_true')
     parser.add_argument('--out-dir', default='export/wbc', help='folder to output data and model checkpoints')
     args = parser.parse_args()
     Path(args.out_dir).mkdir(parents=True, exist_ok=True),
