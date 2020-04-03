@@ -1,3 +1,4 @@
+import kfp
 import kfp.dsl as dsl
 import kfp.gcp as gcp
 import kfp.onprem as onprem
@@ -16,31 +17,31 @@ def wbc_pipline(model_export_dir='export/wbc',
                 subset='Dataset1',
                 project='<your project id>',
                 bucket_name='kf-test1234',
-                n_class=5,
+                n_class="5",
                 resume_model='export/wbc/NFCM_model.pth',
                 epochs='50',
                 batch_size='32',
                 pvc_name=''):
-    train = train(data_root,
-                  metadata_file_name,                  
-                  subset,
-                  project,
-                  bucket_name,
-                  n_class,
-                  epochs,
-                  batch_size,
-                  model_export_dir).set_gpu_limit(1)
+    train = _train(data_root,
+                   metadata_file_name,                  
+                   subset,
+                   project,
+                   bucket_name,
+                   n_class,
+                   epochs,
+                   batch_size,
+                   model_export_dir).set_gpu_limit(1)
     train.add_node_selector_constraint('cloud.google.com/gke-nodepool', 'gpu-pool')
     # out = train.outputs['output']
     
-    test = test(data_root,
-                metadata_file_name,
-                subset,
-                project,
-                bucket_name,
-                n_class,
-                resume_model,
-                model_export_dir)
+    test = _test(data_root,
+                 metadata_file_name,
+                 subset,
+                 project,
+                 bucket_name,
+                 n_class,
+                 resume_model,
+                 model_export_dir)
     test.after(train)
 
     steps = [train, test]
@@ -49,16 +50,17 @@ def wbc_pipline(model_export_dir='export/wbc',
             step.apply(gcp.use_gcp_secret('user-gcp-sa'))
 
 
-def train(data_root,
-          metadata_file_name,
-          subset,
-          project,
-          bucket_name,
-          n_class,
-          epochs,
-          batch_size,
-          model_export_dir):
+def _train(data_root,
+           metadata_file_name,
+           subset,
+           project,
+           bucket_name,
+           n_class,
+           epochs,
+           batch_size,
+           model_export_dir):
     return dsl.ContainerOp(
+            name='train',
             image='gcr.io/<your project id>/wbc-model:v0.1.0',
             command=['python3', 'train.py'],
             arguments=[
@@ -73,20 +75,21 @@ def train(data_root,
                     '--out-dir', model_export_dir
             ],
             file_outputs={
-                        'output': '/output.txt',
+                'output': '/output.txt',
             }
         )
 
 
-def test(data_root,
-         metadata_file_name,
-         subset,
-         project,
-         bucket_name,
-         n_class,
-         resume_model,
-         model_export_dir):
+def _test(data_root,
+          metadata_file_name,
+          subset,
+          project,
+          bucket_name,
+          n_class,
+          resume_model,
+          model_export_dir):
     return dsl.ContainerOp(
+            name='test',
             image='gcr.io/<your project id>/wbc-model:v0.1.0',
             command=['python3', 'test.py'],
             arguments=[
@@ -100,11 +103,11 @@ def test(data_root,
                     '--out-dir', model_export_dir
             ],
             file_outputs={
-                        'MLPipeline Metrics': '/mlpipeline-metrics.json',
-                        'MLPipeline UI metadata': '/mlpipeline-ui-metadata.json'
+                'MLPipeline Metrics': '/mlpipeline-metrics.json',
+                'MLPipeline UI metadata': '/mlpipeline-ui-metadata.json'
             }
         )
 
 
 if __name__ == '__main__':
-    compiler.Compiler().compile(wbc_pipline, __file__ + '.tar.gz')
+    kfp.compiler.Compiler().compile(wbc_pipline, __file__ + '.tar.gz')

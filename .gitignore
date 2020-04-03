@@ -132,3 +132,4 @@ dockers/
 Docker*
 *.pth
 export/
+*.tar.gz
