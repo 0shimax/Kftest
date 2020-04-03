@@ -107,4 +107,4 @@ def test(data_root,
 
 
 if __name__ == '__main__':
-    compiler.Compiler().compile(clf_pipeline, __file__ + '.tar.gz')
+    compiler.Compiler().compile(wbc_pipline, __file__ + '.tar.gz')
