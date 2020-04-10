@@ -34,7 +34,7 @@ def _test(project,
           model_export_dir):
     return dsl.ContainerOp(
             name='test',
-            image='gcr.io/<your project id>/wbc-model:v0.1.0',
+            image='gcr.io/{}/wbc-model:v0.1.0'.format(project),
             command=['python3', 'pipline_examples/mnist_test.py'],
             arguments=[
                     '--project', project,
