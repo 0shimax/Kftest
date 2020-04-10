@@ -1,13 +1,50 @@
+from pathlib import Path
+import argparse
 from torch.utils.data import DataLoader
 import torch
 from torchvision import datasets, transforms
 import torch.nn as nn
 from collections import OrderedDict
 import torch.utils.model_zoo as model_zoo
+from sklearn.metrics import accuracy_score, confusion_matrix
+import pandas
+import json
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = model_zoo.load_url('http://ml.cs.tsinghua.edu.cn/~chenxi/pytorch-models/mnist-b07bb66b.pth')
+
+
+class MLP(nn.Module):
+    def __init__(self, input_dims, n_hiddens, n_class):
+        super(MLP, self).__init__()
+        assert isinstance(input_dims, int), 'Please provide int for input_dims'
+        self.input_dims = input_dims
+        current_dims = input_dims
+        layers = OrderedDict()
+
+        if isinstance(n_hiddens, int):
+            n_hiddens = [n_hiddens]
+        else:
+            n_hiddens = list(n_hiddens)
+        for i, n_hidden in enumerate(n_hiddens):
+            layers['fc{}'.format(i+1)] = nn.Linear(current_dims, n_hidden)
+            layers['relu{}'.format(i+1)] = nn.ReLU()
+            layers['drop{}'.format(i+1)] = nn.Dropout(0.2)
+            current_dims = n_hidden
+        layers['out'] = nn.Linear(current_dims, n_class)
+
+        self.model= nn.Sequential(layers)
+
+    def forward(self, inpt):
+        inpt = inpt.view(inpt.size(0), -1)
+        return self.model.forward(inpt)
+
+
+model = MLP(784, [256, 256], 10)
+m = model_zoo.load_url('http://ml.cs.tsinghua.edu.cn/~chenxi/pytorch-models/mnist-b07bb66b.pth',
+                       map_location=torch.device(device))
+state_dict = m.state_dict() if isinstance(m, nn.Module) else m
+model.load_state_dict(state_dict)
 
 
 def get_dataset():
@@ -15,10 +52,10 @@ def get_dataset():
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.1307,), (0.3081,))
                             ])
-    testset = torchvision.datasets.MNIST(root='/tmp',
-                                            train=False, 
-                                            download=True, 
-                                            transform=transform)
+    testset = datasets.MNIST(root='/tmp',
+                            train=False, 
+                            download=True, 
+                            transform=transform)
     testloader = torch.utils.data.DataLoader(testset, 
                                                 batch_size=1,
                                                 shuffle=False, 
@@ -27,7 +64,7 @@ def get_dataset():
 
 
 def main(args):
-    test_loader = get_dataset
+    test_loader = get_dataset()
     test(args, test_loader)
 
 
@@ -41,11 +78,12 @@ def test(args, data_loader):
             cat = cat.to(device)
             label_idxs.append(cat.item())
 
-            out = model(image)
+            output = model(image)
             result_labels.append(output.data.max(1)[1])
 
+    class_names = [str(i) for i in range(args.n_class)]
     write_metric(args, label_idxs, result_labels, args.n_class, 
-                 list(idx2label.values()), data_loader.dataset.gcs_io)
+                 class_names)
     print("done")
 
 
@@ -53,6 +91,8 @@ def write_metric(args, target, predicted, n_class, class_names,
                  cm_file='confusion_matrix.csv'):
     cm = confusion_matrix(target, predicted, labels=list(range(n_class)))
     accuracy = accuracy_score(target, predicted)
+    print(accuracy)
+
     data = []
     for target_index, target_row in enumerate(cm):
         for predicted_index, count in enumerate(target_row):

@@ -5,6 +5,7 @@ import torch
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset
 from PIL import Image
+import multiprocessing
 
 from feature.utils import ImageTransform, GcsIO
 
@@ -77,5 +78,5 @@ def loader(dataset, batch_size,  shuffle=True):
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=1)
+        num_workers=multiprocessing.cpu_count())
     return loader

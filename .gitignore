@@ -133,3 +133,4 @@ Docker*
 *.pth
 export/
 *.tar.gz
+iam.sh
